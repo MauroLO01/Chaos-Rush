@@ -1,44 +1,35 @@
-class XPOrb extends Phaser.Physics.Arcade.Sprite {
-  constructor(scene, x, y, value) {
+export default class XPOrb extends Phaser.Physics.Arcade.Sprite {
+  constructor(scene, x, y, value = 10) {
     super(scene, x, y, 'xp_orb');
 
     this.scene = scene;
     this.value = value;
-    this.attractionSpeed = 400;
-    this.isCollected = false;
+    this.collected = false;
 
-    this.attractionRadius = 150;
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setCircle(5);
-    this.setImmovable(false);
-    this.setOrigin(0.5)
-    this.setDepth(1);
+    this.setCircle(6);
+    this.setTint(0x00ffff);
+    this.setAlpha(0.9);
+    this.body.setAllowGravity(false);
   }
 
   update(player) {
-    if (!player || this.isCollected) return;
-    const distance = Phaser.Math.Distance.between(this.x, this.y, player.x, player.y)
+    if (!player || this.collected) return;
 
-    if (distance < this.attractionRadius) {
-      this.scene.physics.moveToObject(
-        this,
-        player,
-        this.attractionSpeed,
-      );
-      this.seiTint(0x00ff00);
+    const px = player.sprite?.x ?? player.x;
+    const py = player.sprite?.y ?? player.y;
+    if (px === undefined || py === undefined) return;
+
+    const dist = Phaser.Math.Distance.Between(this.x, this.y, px, py);
+
+    // 🧲 Dentro do raio magnético
+    if (dist < player.magnetRadius) {
+      const angle = Phaser.Math.Angle.Between(this.x, this.y, px, py);
+      this.scene.physics.velocityFromRotation(angle, 200, this.body.velocity);
     } else {
-      this.body.setVelocity(0, 0);
-      this.clearTint();
+      this.body.setVelocity(0);
     }
   }
-
-  Collect() {
-    if (this.isCollected) return;
-    this.isCollected = true;
-    this.destroy();
-  }
 }
-
-export default XPOrb
