@@ -1,12 +1,19 @@
-import MainScene from '../Chaos rush/src/scenes/MainScene.js';
+import MenuScene from './scenes/MenuScene.js'; // ⬅️ Não esqueça de importar
+import MainScene from './scenes/MainScene.js';
 
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
-  backgroundColor: '#111',
-  physics: { default: 'arcade', arcade: { debug: false } },
-  scene: [MainScene],
+  width: '100%',
+  height: '100%',
+  autoCenter: Phaser.Scale.CENTER_BOTH,
+  mode: Phaser.Scale.RESIZE,
+  physics: {
+    default: 'arcade',
+    arcade: {
+      debug: false 
+    }
+  },
+  scene: [MenuScene, MainScene]
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
