@@ -5,14 +5,21 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.scene = scene;
     this.speed = 200;
 
+    // 🩸 Sistema de vida
+    this.maxHP = 100;
+    this.currentHP = this.maxHP;
+
+    // ⚔️ Atributos de combate
+    this.baseDamage = 5;
+    this.damageInterval = 200;
+    this.auraRange = 110;
+
+    // 🧠 XP e Level
     this.level = 0;
     this.xp = 0;
     this.xpToNext = 10;
 
-    this.baseDamage = 5;      // Dano aplicado por 'tick'
-    this.damageInterval = 200; // Tick a cada 200ms (5x por segundo)
-    this.auraRange = 110;      // Raio da aura (para upgrades futuros)
-
+    // 🧍 Player base
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
@@ -20,13 +27,16 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.setSize(20, 20);
     this.setTint(0x00ff00);
 
+    // 🔵 Aura
     this.aura = scene.add.circle(this.x, this.y, this.auraRange, 0x00ffff, 0.15);
     scene.physics.add.existing(this.aura);
-
     this.aura.body.setCircle(this.auraRange);
     this.aura.body.setAllowGravity(false);
     this.aura.body.setImmovable(true);
-    this.aura.body.isSensor = true; 
+    this.aura.body.isSensor = true;
+  }
+  openScene() {
+    this.scene.upgradeSystem.open(this);
   }
 
   update(cursors) {
@@ -40,28 +50,70 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.body.velocity.normalize().scale(this.speed);
 
-    // A aura segue o player
     this.aura.x = this.x;
     this.aura.y = this.y;
+    
+  }
+
+  takeDamage(amount) {
+    this.currentHP -= amount;
+
+    this.scene.cameras.main.shake(100, 0.005);
+
+    if (this.currentHP <= 0) {
+      this.currentHP = 0;
+      this.die();
+    }
+
+    if (this.scene.updateHealthBar) this.scene.updateHealthBar();
+  }
+
+  heal(amount) {
+    this.currentHP = Math.min(this.maxHP, this.currentHP + amount);
+    if (this.scene.updateHealthBar) this.scene.updateHealthBar();
+  }
+
+  die() {
+    console.log("☠️ Player morreu!");
+    this.scene.physics.pause();
+
+    const gameOverText = this.scene.add.text(
+      this.scene.scale.width / 2,
+      this.scene.scale.height / 2,
+      "GAME OVER",
+      { fontSize: "48px", fill: "#ff4444", fontStyle: "bold" }
+    ).setOrigin(0.5);
+
+    this.scene.time.delayedCall(3000, () => {
+      this.scene.scene.restart();
+    });
   }
 
   gainXP(amount) {
     this.xp += amount;
-    if (this.level === 0) {
-      this.xpToNext = 10;
-    }
 
+    // Atualiza a barra de XP visualmente
+    if (this.scene && this.scene.updateXpBar) {
+      this.scene.updateXpBar();
+    }
+    // Checa se subiu de nível
     if (this.xp >= this.xpToNext) {
       this.levelUp();
     }
   }
 
-  levelUp() {
-    this.level++;
-    this.xp -= this.xpToNext;
-    this.xpToNext = Math.floor(this.xpToNext * 1.5);
+levelUp() {
+  this.level++;
+  this.xp -= this.xpToNext;
+  this.xpToNext = Math.floor(this.xpToNext * 1.5);
 
-    console.log(`🔥 Subiu para o nível ${this.level}! XP restante: ${this.xp}. Próximo XP: ${this.xpToNext}`);
-    this.scene.upgradeSystem.open(this);
+  if (this.scene && this.scene.updateXpBar) {
+    this.scene.updateXpBar();
+    this.openScene();
   }
+  
+
+  console.log(`🔼 Level Up! Novo nível: ${this.level}`);
+}
+
 }

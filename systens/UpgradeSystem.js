@@ -110,18 +110,18 @@ export default class UpgradeSystem {
 
     const { width, height } = this.scene.scale;
 
-    // Upgrade inicial automático
-    if (player.level === 1) {
+    // 🚫 Agora o upgrade inicial é aplicado automaticamente e silenciosamente no nível 1
+    if (player.level === 1 && !player._initialUpgradeGiven) {
       const baseUpgrade = this.availableUpgrades.aura_base;
       baseUpgrade.effect(player);
-
-      this.fadeInMenu();
-      this.titleText.setText(baseUpgrade.text);
-
-      this.scene.time.delayedCall(2000, () => this.closeMenu(), [], this);
+      player._initialUpgradeGiven = true; // marca que já aplicou
+      this.isOpen = false;
+      this.scene.playerCanMove = true;
+      if (this.scene.player.body) this.scene.player.body.moves = true;
       return;
     }
 
+    // 🔥 Mostra o menu de upgrades normais
     this.fadeInMenu();
     this.titleText.setText("SELECIONE UM UPGRADE");
 
@@ -132,7 +132,6 @@ export default class UpgradeSystem {
     this.optionTexts.forEach(t => t.text.destroy());
     this.optionTexts = [];
 
-    // Distribui as opções centralizadas verticalmente
     const startY = height * 0.4;
     const spacing = 80;
 
@@ -189,11 +188,9 @@ export default class UpgradeSystem {
   resize(gameSize) {
     const { width, height } = gameSize;
 
-    // Redimensiona e centraliza
     this.bg.setPosition(width / 2, height / 2).setSize(width, height);
     this.titleText.setPosition(width / 2, height * 0.2);
 
-    // Reposiciona opções (mantendo espaçamento)
     const startY = height * 0.4;
     const spacing = 80;
 

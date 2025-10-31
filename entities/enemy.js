@@ -36,8 +36,6 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.flashDamage();
 
         if (this.hp <= 0) {
-            // Modularidade: Emitimos o evento 'die' para que a MainScene cuide do drop do XP
-            console.log(`Evento emitido ${this.x}, ${this.y}`);
             this.emit('die', this.x, this.y, Phaser.Math.Between(5, 15));
             this.destroy();
         }
