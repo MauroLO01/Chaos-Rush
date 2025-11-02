@@ -1,7 +1,6 @@
 export default class XPOrb extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, value = 10) {
-    super(scene, x, y, 'xp_orb');
-
+    super(scene, x, y, "xp_orb");
     this.scene = scene;
     this.value = value;
     this.collected = false;
@@ -14,56 +13,33 @@ export default class XPOrb extends Phaser.Physics.Arcade.Sprite {
     this.setAlpha(0.9);
     this.body.setAllowGravity(false);
 
-    this.baseX = x;
+    // Behavior: flutuar levemente
+    this.floatTimer = 0;
     this.baseY = y;
-
-    this.floatAmpX = 6;
-    this.floatAmpY = 4;
-    this.floatSpeed = 0.0025;
-
-    this.attractionsStrength = 300;
-    this.maxAttraction = 500;
-    this.collectDistance = 21;
-
-    this.body.setDrag(100, 100);
-
-    this._t0 = Phaser.Math.FloatBetween(0, Math.PI * 2);
   }
 
   update(player) {
-    if (this.collected) return;
-    if (!player) return;
+    // Movimiento leve (flutuação) quando não atraído
+    this.floatTimer += this.scene.game.loop.delta / 1000;
+    this.y = this.baseY + Math.sin(this.floatTimer * 2) * 4;
 
-    const px = player.sprite?.x ?? player.x;
-    const py = player.sprite?.y ?? player.y;
-
-    if (px == undefined || py == undefined) return;
-
-    const dist = Phaser.Math.Distance.Between(this.x, this.y, px, py);
-
-    const magnetRadius = player.magnetRadius ?? 150;
-
-    if (dist < magnetRadius) {
-      this.body.stop();
-      this.scene.physics.moveToObject(
-        this,
-        player,
-        this.attractionsStrength
+    // Atração por ímã do player
+    if (player && player.magnetRadius) {
+      const dist = Phaser.Math.Distance.Between(
+        this.x,
+        this.y,
+        player.x,
+        player.y
       );
-      this.setTint(0x00ff00);
-    } else {
-      const t = this.scene.time.now * this.floatSpeed + this._t0;
-      const dist = Phaser.Math.Distance.Between(this.x, this.y, px, py);
-
-      if (dist >= (player.magnetRadius ?? 150)) {
-        const targetX = this.baseX + Math.cos(t) * this.floatAmpX;
-        const targetY = this.baseY + Math.cos(t * 1.2) * this.floatAmpY;
-
-        const dx = targetX - this.x;
-        const dy = targetY - this.y;
-
-        const followSpeed = 20;
-        this.body.setVelocity(dx * followSpeed, dy * followSpeed);
+      if (dist <= (player.magnetRadius || 120)) {
+        // move em direção ao player
+        this.scene.physics.moveToObject(this, player, 200);
+      } else {
+        // desacelera quando longe
+        this.body.setVelocity(
+          this.body.velocity.x * 0.95,
+          this.body.velocity.y * 0.95
+        );
       }
     }
   }
