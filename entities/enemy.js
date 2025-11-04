@@ -1,47 +1,88 @@
 export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
     super(scene, x, y, "enemy");
-    this.scene = scene;
-    this.speed = 70;
-    this.hp = 50;
 
+    this.scene = scene;
+    this.speed = Phaser.Math.Between(50, 100);
+    this.maxHP = 30;
+    this.currentHP = this.maxHP;
+    this.xpValue = 10;
+    this.isDead = false;
+
+    // Adiciona à cena
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+    // Configurações físicas
+    this.setCollideWorldBounds(false);
+    this.setSize(18, 18);
+    this.setOffset(1, 1);
+
+    // Cor inicial
     this.setTint(0xff3333);
-    this.setCircle(10);
-    this.setCollideWorldBounds(true);
   }
 
+  /**
+   * Atualização por frame — segue o jogador.
+   */
   update(player) {
-    if (!player) return;
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
-    this.scene.physics.velocityFromRotation(
-      angle,
-      this.speed,
-      this.body.velocity
-    );
-    // moveToObject opcional: já usamos velocityFromRotation
-  }
+    if (!this.active || !player || this.isDead) return;
 
-  takeDamage(dmg) {
-    this.hp -= dmg;
-    this.flashDamage();
-    if (this.hp <= 0) {
-      this.emit("die", this.x, this.y, Phaser.Math.Between(5, 15));
-      this.destroy();
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > 0) {
+      this.setVelocity((dx / dist) * this.speed, (dy / dist) * this.speed);
     }
   }
 
+  /**
+   * Recebe dano de armas ou aura do jogador.
+   */
+  takeDamage(amount) {
+    if (!this.active || !this.scene || this.isDead) return;
+
+    this.currentHP -= amount;
+    this.flashDamage();
+
+    // Se morreu
+    if (this.currentHP <= 0) {
+      this.die();
+    }
+  }
+
+  /**
+   * Piscar quando recebe dano.
+   */
   flashDamage() {
+    if (!this.scene || !this.active) return;
+
     this.setTint(0xffffff);
-    this.scene.time.delayedCall(
-      100,
-      () => {
+    this.scene.time.delayedCall(100, () => {
+      if (this && this.active && !this.isDead) {
+        this.clearTint();
         this.setTint(0xff3333);
-      },
-      [],
-      this
-    );
+      }
+    });
+  }
+
+  die() {
+    if (this.isDead || !this.scene) return;
+    this.isDead = true;
+
+    // Emite o evento para o MainScene criar o XPOrb
+    this.emit("die", this.x, this.y, this.xpValue);
+
+    // Efeito de desaparecimento
+    this.scene.tweens.add({
+      targets: this,
+      alpha: 0,
+      scale: 0,
+      duration: 200,
+      onComplete: () => {
+        if (this && this.destroy) this.destroy(true);
+      }
+    });
   }
 }
