@@ -3,7 +3,6 @@ export default class ClassSystem {
     constructor(scene) {
         this.scene = scene;
 
-        // Cada classe tem: key, display name, description, weaponKey, passiveKey, base modifiers
         this.classes = {
             ALCHEMIST: {
                 key: "ALCHEMIST",
