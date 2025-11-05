@@ -1,21 +1,27 @@
 export default class Player extends Phaser.Physics.Arcade.Sprite {
-  constructor(scene, x, y) {
+  constructor(scene, x, y, selectedClass = null) {
     super(scene, x, y, "player");
     this.scene = scene;
-    this.speed = 200;
 
-    // Vida
+    // Atributos básicos
+    this.speed = 200;
     this.maxHP = 100;
     this.currentHP = this.maxHP;
-
-    // Combate / XP
     this.baseDamage = 5;
     this.damageInterval = 200;
     this.auraRange = 110;
+    this.magnetRadius = 120;
+
+    //propriedade para debuffs 
+    this.debuffDurationMultiplier = 1;
+    this.dotDamageBonus = 1;
+
+    // Sistema de progressão
     this.level = 0;
     this.xp = 0;
     this.xpToNext = 10;
 
+    // Adiciona o player na cena e ativa física
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
@@ -23,26 +29,38 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.setSize(20, 20);
     this.setTint(0x00ff00);
 
-    // Aura (criada imediatamente para evitar overlaps undefined)
-    this.aura = scene.add.circle(
-      this.x,
-      this.y,
-      this.auraRange,
-      0x00ffff,
-      0.15
-    );
+    // Aura visual + física
+    this.aura = scene.add.circle(this.x, this.y, this.auraRange, 0x00ffff, 0.15);
     scene.physics.add.existing(this.aura);
+
     if (this.aura.body) {
       this.aura.body.setAllowGravity(false);
       this.aura.body.setImmovable(true);
-      try {
-        this.aura.body.setCircle(this.auraRange);
-      } catch (e) {
-        /* safe */
-      }
+      this.aura.body.setCircle(this.auraRange);
       this.aura.body.isSensor = true;
     }
+
+    //  Se o jogador escolheu uma classe, aplica os bônus/debuffs dela
+    if (selectedClass) {
+      if (selectedClass.speedBonus) this.speed += selectedClass.speedBonus;
+      if (selectedClass.damageMultiplier)
+        this.baseDamage *= selectedClass.damageMultiplier;
+      if (selectedClass.maxHPBonus) {
+        this.maxHP += selectedClass.maxHPBonus;
+        this.currentHP = this.maxHP;
+      }
+      if (selectedClass.auraBonus) {
+        this.auraRange += selectedClass.auraBonus;
+        this.aura.setRadius(this.auraRange);
+        if (this.aura.body) this.aura.body.setCircle(this.auraRange);
+      }
+
+      if (selectedClass.passive === 'ressacamagica') {
+        this.debuffDurationMultiplier = 1.25;
+      }
+    }
   }
+
 
   update(cursors) {
     if (this.scene.playerCanMove === false) return;
@@ -55,7 +73,6 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.body.velocity.normalize().scale(this.speed);
 
-    // aura segue jogador
     if (this.aura) {
       this.aura.x = this.x;
       this.aura.y = this.y;
