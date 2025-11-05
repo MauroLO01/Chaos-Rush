@@ -1,143 +1,113 @@
 export default class PassiveSystem {
-    constructor(scene, player) {
+    constructor(scene) {
         this.scene = scene;
-        this.player = player;
-        this.activeEffects = [];
     }
 
-    activateClassAbilities(classType) {
-        this.classType = classType;
-
-        switch (classType) {
-            case "alchemist":
-                this.setupAlchemist();
-                break;
-
-            case "gravedigger":
-                this.setupGravedigger();
-                break;
-
-            case "sentinel":
-                this.setupSentinel();
-                break;
-
-            default:
-                console.warn("Classe não reconhecida:", classType);
+    /**
+     * Ativa a passiva da classe escolhida
+     * @param {string} className - nome normalizado da classe
+     */
+    activateClassAbilities(className) {
+        if (!className) {
+            console.warn("⚠️ Nenhum nome de classe recebido no PassiveSystem.");
+            return;
         }
-    }
 
-    // 🔮 ALCHEMISTA ESPECTRAL
-    setupAlchemist() {
-        console.log("Classe: Alquimista Espectral ativa 🧪");
+        const normalized = className
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z]/g, "");
 
-        this.player.luck += 0.15; // Passiva: +15% de chance de “Ressaca Mágica”
+        console.log("🧩 Classe recebida (normalizada):", normalized);
 
-        // Arma: Frasco Instável
-        this.scene.input.keyboard.on("keydown-SPACE", () => this.throwFlask());
-    }
+        // Mapeamento principal — com fallback para includes()
+        const map = {
+            alquimista: () => this.activateAlquimista(),
+            alquimistaespectral: () => this.activateAlquimista(),
+            spectralalchemist: () => this.activateAlquimista(),
 
-    throwFlask() {
-        if (!this.scene || this.isThrowing) return;
-        this.isThrowing = true;
+            coveiro: () => this.activateCoveiro(),
+            coveiroprofano: () => this.activateCoveiro(),
+            gravedigger: () => this.activateCoveiro(),
 
-        const flask = this.scene.physics.add.sprite(this.player.x, this.player.y, "flask");
-        flask.setScale(0.6);
-        flask.setVelocity(
-            Math.cos(this.player.rotation) * 250,
-            Math.sin(this.player.rotation) * 250
-        );
+            sentinela: () => this.activateSentinela(),
+            sentineladosino: () => this.activateSentinela(),
+            bellsentinel: () => this.activateSentinela(),
+        };
 
-        this.scene.time.delayedCall(800, () => {
-            this.createFlaskArea(flask.x, flask.y);
-            flask.destroy();
-            this.isThrowing = false;
-        });
-    }
+        // Busca direta
+        if (map[normalized]) {
+            console.log(`✨ Passiva reconhecida diretamente: ${normalized}`);
+            map[normalized]();
+            return;
+        }
 
-    createFlaskArea(x, y) {
-        const type = Phaser.Math.RND.pick(["fire", "poison", "slow"]);
-        const color =
-            type === "fire" ? 0xff6600 : type === "poison" ? 0x00ff00 : 0x66ccff;
-
-        const area = this.scene.add.circle(x, y, 80, color, 0.3);
-        this.scene.physics.add.existing(area);
-        area.body.setAllowGravity(false);
-        area.body.isSensor = true;
-
-        const duration = 4000;
-        this.scene.time.delayedCall(duration, () => area.destroy());
-
-        const overlap = this.scene.physics.add.overlap(
-            area,
-            this.scene.enemies,
-            (_, enemy) => {
-                if (!enemy || !enemy.active) return;
-                enemy.takeDamage(3);
-
-                if (type === "fire") this.applyFire(enemy);
-                if (type === "poison") this.applyPoison(enemy);
-                if (type === "slow") this.applySlow(enemy);
+        // Busca parcial inteligente (pega palavras-chave)
+        for (const key in map) {
+            if (normalized.includes(key)) {
+                console.log(`🔍 Passiva reconhecida por similaridade: ${key}`);
+                map[key]();
+                return;
             }
-        );
+        }
 
-        this.scene.time.delayedCall(duration, () =>
-            this.scene.physics.world.removeCollider(overlap)
-        );
+        console.warn("⚠️ Nenhuma passiva encontrada para:", normalized);
     }
 
-    applyFire(enemy) {
-        if (enemy.isOnFire) return;
-        enemy.isOnFire = true;
+    // ─────────────── 🧪 ALQUIMISTA ESPECTRAL ───────────────
+    activateAlquimista() {
+        console.log("🧪 Passiva ativada: Ressaca Mágica (+15% chance de resetar cooldowns)");
 
-        const burn = this.scene.time.addEvent({
-            delay: 400,
-            repeat: 4,
-            callback: () => enemy.takeDamage(2),
-        });
-
-        this.scene.time.delayedCall(2000, () => {
-            burn.remove();
-            enemy.isOnFire = false;
+        this.scene.events.on("pickupXP", () => {
+            const chance = 0.15;
+            if (Math.random() < chance) {
+                console.log("💥 Ressaca Mágica ativada — cooldowns resetados!");
+                this.scene.weaponSystem?.resetAllCooldowns?.();
+            }
         });
     }
 
-    applyPoison(enemy) {
-        if (enemy.isPoisoned) return;
-        enemy.isPoisoned = true;
+    // ─────────────── ⚰️ COVEIRO PROFANO ───────────────
+    activateCoveiro() {
+        console.log("⚰️ Passiva ativada: Culto dos Mortos (+1 invocação, +duração)");
 
-        const poison = this.scene.time.addEvent({
-            delay: 800,
-            repeat: 5,
-            callback: () => enemy.takeDamage(1),
-        });
+        const p = this.scene.player;
+        if (!p) return;
 
-        this.scene.time.delayedCall(4000, () => {
-            poison.remove();
-            enemy.isPoisoned = false;
-        });
-    }
+        p.speed *= 0.9; // -10% de velocidade
+        p.summonBonus = { duration: 1.2, quantity: 1 };
 
-    applySlow(enemy) {
-        if (enemy.isSlowed) return;
-        enemy.isSlowed = true;
+        const text = this.scene.add.text(p.x, p.y - 30, "🕯️ Culto dos Mortos", {
+            fontSize: "12px",
+            fill: "#ccccff",
+        }).setOrigin(0.5).setDepth(10).setAlpha(0.7);
 
-        const originalSpeed = enemy.speed;
-        enemy.speed *= 0.6;
-
-        this.scene.time.delayedCall(3000, () => {
-            enemy.speed = originalSpeed;
-            enemy.isSlowed = false;
+        this.scene.tweens.add({
+            targets: text,
+            alpha: 0,
+            y: p.y - 60,
+            duration: 2000,
+            onComplete: () => text.destroy(),
         });
     }
 
-    // ⚰️ COVEIRO PROFANO (ainda básico)
-    setupGravedigger() {
-        console.log("Classe: Coveiro Profano ativa ⚰️");
-        this.player.speed *= 0.9; // Penalidade de velocidade
-    }
+    // ─────────────── 🔔 SENTINELA DO SINO ───────────────
+    activateSentinela() {
+        console.log("🔔 Passiva ativada: Eco Sagrado (+1 dano em empurrões, +30% knockback)");
 
-    // 🔔 SENTINELA DO SINO (placeholder)
-    setupSentinel() {
-        console.log("Classe: Sentinela do Sino ativa 🔔");
+        const p = this.scene.player;
+        if (!p) return;
+
+        p.knockbackBonus = 1.3;
+        p.pushDamageBonus = 1;
+
+        const safeCircle = this.scene.add.circle(p.x, p.y, 80, 0x88ccff, 0.1);
+        safeCircle.setDepth(1);
+
+        this.scene.events.on("update", () => {
+            safeCircle.x = p.x;
+            safeCircle.y = p.y;
+        });
     }
 }
