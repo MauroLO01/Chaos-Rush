@@ -1,8 +1,8 @@
 // 📦 WeaponSystem.js — versão corrigida e com debug
 
 const FRASCO_CONFIG = {
-    VELOCITY: 350,
-    LIFESPAN: 900,
+    VELOCITY: 400,
+    LIFESPAN: 400,
     AREA_RADIUS: 60,
     AREA_TICK_RATE: 300,
     BASE_TICKS: 6,
@@ -50,58 +50,67 @@ export default class WeaponSystem {
     _useFrasco() {
         const scene = this.scene;
         const p = this.player;
+        const pointer = scene.input.activePointer;
 
-        console.log("🧪 Usando frasco instável!");
-        console.log("Textura existe?", scene.textures.exists("flask"));
-        console.log("Inimigos ativos:", scene.enemies?.countActive(true) || 0);
+        const angle1 = Phaser.Math.Angle.Between(p.x, p.y, pointer.worldX, pointer.worldY);
 
         const effects = ["fire", "poison", "slow"];
         const chosenEffect = effects[Math.floor(Math.random() * effects.length)];
 
-        // ✅ Garante que a textura existe
         if (!scene.textures.exists("flask")) {
             console.error("❌ Textura 'flask' não encontrada! Verifique o preload().");
             return;
         }
 
+        // Bônus de área apenas para o efeito 'slow'
+        const slowRadiusBonus = (chosenEffect === "slow")
+            ? (this.player.slowRadiusBonus || 30) // default 30 se não definido
+            : 0;
+
+        const finalRadius = FRASCO_CONFIG.AREA_RADIUS + slowRadiusBonus;
+
+        // Cria o sprite do frasco
         const flask = scene.physics.add.sprite(p.x, p.y, "flask")
             .setDepth(5)
             .setTint(getDebuffColor(chosenEffect));
 
-        // Movimento aleatório
-        const angle = Phaser.Math.Between(0, 360);
-        scene.physics.velocityFromAngle(angle, FRASCO_CONFIG.VELOCITY, flask.body.velocity);
+        // Direção do lançamento (aponta para o cursor)
+        scene.physics.velocityFromRotation(angle1, FRASCO_CONFIG.VELOCITY, flask.body.velocity);
 
+        // Ativa cooldown
         this.startCooldown("frascoInstavel", 1200);
 
-        // 💥 Quando colidir com inimigo
+        // Quando colidir com inimigo: cria efeito na posição de colisão usando finalRadius
         scene.physics.add.collider(flask, scene.enemies, (frasco, enemy) => {
             console.log(`💥 Frasco colidiu com inimigo (${chosenEffect})`);
-            this._createGroundEffect(frasco.x, frasco.y, chosenEffect);
+            this._createGroundEffect(frasco.x, frasco.y, chosenEffect, finalRadius);
             frasco.destroy();
         });
 
-        // ⏰ Se não colidir, cria o efeito ao fim da vida
+        // Se não colidir, cria o efeito ao fim da vida
         scene.time.delayedCall(FRASCO_CONFIG.LIFESPAN, () => {
             if (flask.active) {
                 console.log(`🧨 Frasco expirou (${chosenEffect})`);
-                this._createGroundEffect(flask.x, flask.y, chosenEffect);
+                this._createGroundEffect(flask.x, flask.y, chosenEffect, finalRadius);
                 flask.destroy();
             }
         });
     }
 
-    _createGroundEffect(x, y, effect) {
+
+    _createGroundEffect(x, y, effect, radius = FRASCO_CONFIG.AREA_RADIUS) {
         const scene = this.scene;
+
+        // usa debuffDurationMultiplier do jogador se existir
         const durationMultiplier = this.player.debuffDurationMultiplier || 1;
         const totalTicks = Math.ceil(FRASCO_CONFIG.BASE_TICKS * durationMultiplier);
 
+        const finalRadius = radius || FRASCO_CONFIG.AREA_RADIUS;
         const color = getDebuffColor(effect);
-        const area = scene.add.circle(x, y, FRASCO_CONFIG.AREA_RADIUS, color, 0.25)
+
+        const area = scene.add.circle(x, y, finalRadius, color, 0.25)
             .setStrokeStyle(2, color)
             .setDepth(4);
-
-        console.log(`🌫️ Criando área de debuff: ${effect} (${totalTicks} ticks)`);
 
         let ticksDone = 0;
 
@@ -115,19 +124,19 @@ export default class WeaponSystem {
                     if (!e || !e.active) return;
 
                     const distance = Phaser.Math.Distance.Between(e.x, e.y, x, y);
-                    if (distance <= FRASCO_CONFIG.AREA_RADIUS) {
+                    if (distance <= finalRadius) {
                         this._applyFlaskDebuff(e, effect);
                     }
                 });
 
                 if (ticksDone >= totalTicks) {
-                    area.destroy();
+                    if (area && area.destroy) area.destroy();
                     timer.remove(false);
-                    console.log(`✅ Efeito ${effect} finalizado`);
                 }
             }
         });
     }
+
 
     _applyFlaskDebuff(enemy, effect) {
         const scene = this.scene;
@@ -141,7 +150,7 @@ export default class WeaponSystem {
                 enemy.takeDamage(baseDotDamage + 2);
                 break;
             case "slow":
-                enemy.takeDamage(baseDotDamage * 0.5);
+                enemy.takeDamage(baseDotDamage * 0.1);
 
                 if (!enemy._origSpeed) enemy._origSpeed = enemy.speed;
                 if (enemy.speed > enemy._origSpeed * 0.6) {
