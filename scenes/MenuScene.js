@@ -21,7 +21,6 @@ export default class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Fundo translúcido do menu
     const panel = this.add.rectangle(
       this.scale.width / 2,
       this.scale.height / 2 + 50,
@@ -82,7 +81,6 @@ export default class MenuScene extends Phaser.Scene {
       btn.on("pointerout", () => btn.setFillStyle(0x111122, 0.7));
 
       btn.on("pointerdown", () => {
-        console.log("Classe selecionada:", cls.name);
         this.scene.start("MainScene", { selectedClass: cls });
       });
     });
