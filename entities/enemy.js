@@ -22,9 +22,6 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setTint(0xff3333);
   }
 
-  /**
-   * Atualização por frame — segue o jogador.
-   */
   update(player) {
     if (!this.active || !player || this.isDead) return;
 
@@ -37,9 +34,6 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  /**
-   * Recebe dano de armas ou aura do jogador.
-   */
   takeDamage(amount) {
     if (!this.active || !this.scene || this.isDead) return;
 
@@ -52,9 +46,6 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  /**
-   * Piscar quando recebe dano.
-   */
   flashDamage() {
     if (!this.scene || !this.active) return;
 
@@ -71,10 +62,13 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.isDead || !this.scene) return;
     this.isDead = true;
 
-    // Emite o evento para o MainScene criar o XPOrb
+    // Emite evento para MainScene criar o XPOrb
     this.emit("die", this.x, this.y, this.xpValue);
 
-    // Efeito de desaparecimento
+    //Emite evento global de abate (para a passiva do Alquimista)
+    this.scene.events.emit("enemyKilled", this);
+
+    //animação de morte
     this.scene.tweens.add({
       targets: this,
       alpha: 0,
@@ -85,4 +79,5 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     });
   }
+
 }
