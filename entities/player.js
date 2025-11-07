@@ -16,6 +16,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.debuffDurationMultiplier = 1;
     this.dotDamageBonus = 1;
 
+    this.slowRaidusBonus = 0;
+
     // Sistema de progressão
     this.level = 0;
     this.xp = 0;
