@@ -29,7 +29,7 @@ export default class MainScene extends Phaser.Scene {
       g.generateTexture(shape.key, shape.w || shape.r * 2, shape.h || shape.r * 2);
     });
 
-    g.destroy(); // ✅ só destruímos no fim
+    g.destroy();
   }
 
 
@@ -58,8 +58,20 @@ export default class MainScene extends Phaser.Scene {
     this.passiveSystem = new PassiveSystem(this);
     this.weaponSystem = new WeaponSystem(this);
 
+    this.passiveBarBg = this.add.rectangle(100, 70, 200, 10, 0x222222)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
+
+    this.passiveBar = this.add.rectangle(100, 70, 0, 10, 0x00ff88)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
+
+    this.passiveText = this.add.text(310, 65, "Passiva: 0%", {
+      fontSize: "14px",
+      fill: "#00ffcc"
+    }).setScrollFactor(0);
+
     if (this.selectedClass) {
-      console.log(`✅ Classe recebida do Menu: ${this.selectedClass.name}`);
       this.startGame(this.selectedClass);
     } else {
       console.warn("⚠️ Nenhuma classe recebida. Retornando ao menu...");
