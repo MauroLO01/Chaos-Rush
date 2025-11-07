@@ -1,5 +1,3 @@
-// 📦 WeaponSystem.js — versão corrigida e com debug
-
 const FRASCO_CONFIG = {
     VELOCITY: 400,
     LIFESPAN: 400,
@@ -82,7 +80,6 @@ export default class WeaponSystem {
 
         // Quando colidir com inimigo: cria efeito na posição de colisão usando finalRadius
         scene.physics.add.collider(flask, scene.enemies, (frasco, enemy) => {
-            console.log(`💥 Frasco colidiu com inimigo (${chosenEffect})`);
             this._createGroundEffect(frasco.x, frasco.y, chosenEffect, finalRadius);
             frasco.destroy();
         });
@@ -90,7 +87,6 @@ export default class WeaponSystem {
         // Se não colidir, cria o efeito ao fim da vida
         scene.time.delayedCall(FRASCO_CONFIG.LIFESPAN, () => {
             if (flask.active) {
-                console.log(`🧨 Frasco expirou (${chosenEffect})`);
                 this._createGroundEffect(flask.x, flask.y, chosenEffect, finalRadius);
                 flask.destroy();
             }
