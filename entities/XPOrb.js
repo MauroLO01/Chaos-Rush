@@ -4,6 +4,9 @@ export default class XPOrb extends Phaser.Physics.Arcade.Sprite {
     this.scene = scene;
     this.value = value;
     this.collected = false;
+    this.isAttracted = false;
+    this.floatTimer = 0;
+    this.baseY = y;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -19,11 +22,15 @@ export default class XPOrb extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(player) {
-    // Movimiento leve (flutuação) quando não atraído
-    this.floatTimer += this.scene.game.loop.delta / 1000;
-    this.y = this.baseY + Math.sin(this.floatTimer * 2) * 4;
+    if (!this.isAttracted) {
+      this.floatTimer += this.scene.game.loop.delta / 1000;
+      this.body.velocity.y = Math.sin(this.floatTimer * 2) * 15;
+    } else {
+      this.floatTimer = 0;
+    }
 
-    // Atração por ímã do player
+    //atração (imã)
+
     if (player && player.magnetRadius) {
       const dist = Phaser.Math.Distance.Between(
         this.x,
@@ -31,15 +38,14 @@ export default class XPOrb extends Phaser.Physics.Arcade.Sprite {
         player.x,
         player.y
       );
+
       if (dist <= (player.magnetRadius || 120)) {
-        // move em direção ao player
-        this.scene.physics.moveToObject(this, player, 200);
+        this.isAttracted = true;
+
+        this.scene.physics.moveToObject(this, player, 300);
       } else {
-        // desacelera quando longe
-        this.body.setVelocity(
-          this.body.velocity.x * 0.95,
-          this.body.velocity.y * 0.95
-        );
+        this.isAttracted = false;
+        this.body.velocity.x *= 0.9;
       }
     }
   }
